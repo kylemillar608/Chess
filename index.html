@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Board Visualizer</title>
+    <style>
+        .chess-board {
+            width: 400px;
+            height: 400px;
+            border: 2px solid #333;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+        }
+        .square {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            aspect-ratio: 1;
+            height: 50px;
+            width: 50px;
+        }
+        .white {
+            background-color: #f0d9b5;
+        }
+        .black {
+            background-color: #b58863;
+        }
+        .square.selected {
+            background-color: #7b61ff;
+        }
+        .square:hover {
+            cursor: pointer;
+            opacity: 0.8;
+        }
+        .square.possible-move {
+            position: relative;
+        }
+        .square.possible-move::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(0, 255, 0, 0.3);
+            border-radius: 50%;
+        }
+        .square.possible-move:hover::before {
+            background-color: rgba(0, 255, 0, 0.5);
+        }
+        .game-container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        .reset-button {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .reset-button:hover {
+            background-color: #45a049;
+        }
+        .game-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+        }
+
+        .timer-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .player-timer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+        }
+
+        .time-display {
+            font-size: 2em;
+            font-family: monospace;
+            margin: 5px 0;
+        }
+
+        .time-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .time-button {
+            width: 30px;
+            height: 30px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        .time-button:hover {
+            background-color: #45a049;
+        }
+
+        .start-button {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .start-button:hover {
+            background-color: #45a049;
+        }
+
+        .active-timer {
+            border: 2px solid #4CAF50;
+        }
+
+        .time-presets {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .time-preset-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background-color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .time-preset-option:hover {
+            background-color: #f5f5f5;
+        }
+
+        .time-preset-option input[type="radio"] {
+            cursor: pointer;
+        }
+
+        .time-preset-option label {
+            cursor: pointer;
+            flex-grow: 1;
+        }
+
+        .time-preset-option.selected {
+            background-color: #e3f2e3;
+        }
+
+        .validation-toggle {
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .toggle-label input[type="checkbox"] {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div id="chessBoard" class="chess-board"></div>
+        <div class="game-controls">
+            <div class="timer-container">
+                <div class="player-timer" id="blackTimer">
+                    <span>Black</span>
+                    <div class="time-display">10:00</div>
+                </div>
+                <div class="time-presets">
+                    <div class="time-preset-option">
+                        <input type="radio" id="time10s" name="timePreset" value="10s">
+                        <label for="time10s">10 seconds</label>
+                    </div>
+                    <div class="time-preset-option">
+                        <input type="radio" id="time1m" name="timePreset" value="1m">
+                        <label for="time1m">1 minute</label>
+                    </div>
+                    <div class="time-preset-option">
+                        <input type="radio" id="time5m" name="timePreset" value="5m">
+                        <label for="time5m">5 minutes</label>
+                    </div>
+                    <div class="time-preset-option">
+                        <input type="radio" id="time10m" name="timePreset" value="10m" checked>
+                        <label for="time10m">10 minutes</label>
+                    </div>
+                </div>
+                <div class="player-timer" id="whiteTimer">
+                    <span>White</span>
+                    <div class="time-display">10:00</div>
+                </div>
+            </div>
+            <div class="validation-toggle">
+                <label class="toggle-label">
+                    <input type="checkbox" id="validationToggle">
+                    Enable Move Validation
+                </label>
+            </div>
+            <div class="validation-toggle">
+                <label class="toggle-label">
+                    <input type="checkbox" id="humanReadableToggle">
+                    Human Readable Position
+                </label>
+            </div>
+            <button id="startButton" class="start-button">Start Game</button>
+            <button id="resetButton" class="reset-button">Reset Game</button>
+        </div>
+    </div>
+    <script type="module" src="src/main.js"></script>
+</body>
+</html> 
