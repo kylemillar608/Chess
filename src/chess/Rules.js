@@ -51,13 +51,16 @@ class Rules {
             }
         }
 
+        // Skip en passant check on first move
+        if(!lastMove) {
+            return validMoves;
+        }
         const lastMoveWasPawn = lastMove.piece.type === 'pawn';
         const lastMoveWasTwoStep = Math.abs(lastMove.toSquare.row - lastMove.fromSquare.row) === 2;
         const enPassantIsAvailable = fromSquare.row === lastMove.toSquare.row && Math.abs(lastMove.toSquare.col - fromSquare.col) === 1;
         console.log(JSON.stringify(lastMove), lastMoveWasPawn, lastMoveWasTwoStep, enPassantIsAvailable)
         // En passant
-        if (lastMove && 
-            lastMoveWasPawn && 
+        if (lastMoveWasPawn && 
             lastMoveWasTwoStep && // Double pawn move
             enPassantIsAvailable) { // Adjacent file
             validMoves.push({ 
