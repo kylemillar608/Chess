@@ -4,7 +4,7 @@ A project to build valid chess gameplay with visualizer followed by various ches
 It's called Chess AI because this was originally created as a way to see what "vibe coding" was all about. Most of the base game was vibe coded, but some refactorings for fun + engines mostly done by hand.
 
 # Gameplay
-todo - add image here
+![Board Visual](/assets/board.png)
 
 Options:
 - Time Limit Setting

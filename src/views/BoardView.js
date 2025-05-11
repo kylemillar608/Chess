@@ -20,20 +20,20 @@ class BoardView {
 
         this.pieceSymbols = {
             black: {
-                king: '♔',
-                queen: '♕',
-                rook: '♖',
-                bishop: '♗',
-                knight: '♘',
-                pawn: '♙'
-            },
-            white: {
                 king: '♚',
                 queen: '♛',
                 rook: '♜',
                 bishop: '♝',
                 knight: '♞',
                 pawn: '♟'
+            },
+            white: {
+                king: '♔',
+                queen: '♕',
+                rook: '♖',
+                bishop: '♗',
+                knight: '♘',
+                pawn: '♙'
             }
         };
 
