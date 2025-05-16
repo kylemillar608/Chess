@@ -440,6 +440,11 @@ class Rules {
                 enPassantWasAvailable &&
                 enPassantTaken;
     }
+
+    isPromotion(move) {
+        console.log('promotion move check: ', move)
+        return move.piece.type === 'pawn' && ((move.piece.color === 'white' && move.toSquare.row === 0) || move.piece.color === 'black' && move.toSquare.row === 7);
+    }
 }
 
 export default Rules; 

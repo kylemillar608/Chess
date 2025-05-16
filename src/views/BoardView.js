@@ -7,6 +7,8 @@ class BoardView {
         this.boardElement = document.getElementById('chessBoard');
         this.squares = new Array(8).fill(null).map(() => new Array(8).fill(null));
         this.selectedSquare = null;
+        this.promotionPopup = document.getElementById('promotionPopup');
+        this.promotionResolve = null;
 
         this.whiteTimer = new Timer(10);
         this.blackTimer = new Timer(10);
@@ -107,11 +109,45 @@ class BoardView {
         }
     }
 
-    tryMovePiece(fromSquare, toSquare) {
+    // Prompt the user with a popup to choose the piece they would like to promote their pawn to.
+    // The popup should show the valid pieces to choose from in a color which matches the player's color.
+    // Once the player clicks a piece, the popup is hidden and this function returns that piece
+    // in the form {type: 'queen', color: 'black'} for example
+    promptUserForPromotion(color) {
+        return new Promise((resolve) => {
+            this.promotionResolve = resolve;
+            
+            // Update piece symbols to match the player's color
+            const pieces = this.promotionPopup.querySelectorAll('.promotion-piece');
+            pieces.forEach(piece => {
+                piece.textContent = this.pieceSymbols[color][piece.dataset.piece];
+            });
+            
+            // Show the popup
+            this.promotionPopup.style.display = 'block';
+            
+            // Add click handlers
+            pieces.forEach(piece => {
+                piece.onclick = () => {
+                    const pieceType = piece.dataset.piece;
+                    this.promotionPopup.style.display = 'none';
+                    resolve({ type: pieceType, color: color });
+                };
+            });
+        });
+    }
+
+    async tryMovePiece(fromSquare, toSquare) {
         console.log('moving - ' + '{' +fromSquare.row + ',' +fromSquare.col + '}' + '{' +toSquare.row + ',' +toSquare.col + '}');
-        let updatedSquares = this.board.movePiece(fromSquare, toSquare);
-        if (updatedSquares.length) {
-            for (const updatedSquare of updatedSquares) {
+        let moveState = this.board.movePiece(fromSquare, toSquare);
+        if(moveState.promotionSquare) {
+            console.log('promotion eligible')
+            const piece = this.board.getPiece(moveState.promotionSquare);
+            const promotionPiece = await this.promptUserForPromotion(piece.color);
+            this.board.promote(moveState.promotionSquare, promotionPiece);
+        }
+        if (moveState.updatedSquares.length) {
+            for (const updatedSquare of moveState.updatedSquares) {
                 console.log('updated square ', JSON.stringify(updatedSquare))
                 this.reloadSquare(updatedSquare);
             }

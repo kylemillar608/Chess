@@ -188,6 +188,38 @@
             width: 18px;
             height: 18px;
         }
+
+        .promotion-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+
+        .promotion-options {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .promotion-piece {
+            font-size: 2em;
+            padding: 10px;
+            cursor: pointer;
+            text-align: center;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .promotion-piece:hover {
+            background-color: #f0f0f0;
+        }
     </style>
 </head>
 <body>
@@ -236,6 +268,15 @@
             </div>
             <button id="startButton" class="start-button">Start Game</button>
             <button id="resetButton" class="reset-button">Reset Game</button>
+        </div>
+    </div>
+    <div id="promotionPopup" class="promotion-popup">
+        <h3>Choose a piece to promote to:</h3>
+        <div class="promotion-options">
+            <div class="promotion-piece" data-piece="queen">♛</div>
+            <div class="promotion-piece" data-piece="rook">♜</div>
+            <div class="promotion-piece" data-piece="bishop">♝</div>
+            <div class="promotion-piece" data-piece="knight">♞</div>
         </div>
     </div>
     <script type="module" src="src/main.js"></script>

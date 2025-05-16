@@ -117,7 +117,11 @@ class Board {
 
         // Switch turns
         this.currentTurn = this.currentTurn === 'white' ? 'black' : 'white';
-        return updatedSquares;
+        console.log('is promotion: ', this.rules.isPromotion(move))
+        return {
+            updatedSquares, 
+            promotionSquare: this.rules.isPromotion(move) ? move.toSquare : undefined
+        };
     }
 
     movePiece(fromSquare, toSquare) {
@@ -141,8 +145,6 @@ class Board {
     makeMove(move, updateLastMove = true) {
         this.state[move.toSquare.row][move.toSquare.col] = move.piece;
         this.clearSquare(move.fromSquare);
-        if(move.piece.type === 'king')
-            console.log('moving king - ', JSON.stringify(move))
         move.piece.has_moved = true;
         
         // kind of a hack to skip history for rook move during castle
@@ -151,6 +153,10 @@ class Board {
             this.lastMove = move;
         }
         return [move.fromSquare, move.toSquare];
+    }
+
+    promote(square, piece) {
+        this.state[square.row][square.col] = piece;
     }
 
     clearSquare(square) {
