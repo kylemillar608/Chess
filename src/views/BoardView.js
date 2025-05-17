@@ -46,6 +46,7 @@ class BoardView {
         this.setupResetButton();
         this.setupValidationToggle();
         this.setupHumanReadableToggle();
+        this.setupGameOverPopup();
     }
 
     initializeBoard() {
@@ -61,6 +62,11 @@ class BoardView {
                 squareView.dataset.col = col;
                 this.boardElement.appendChild(squareView);
                 this.squares[row][col] = squareView;
+
+                // Add hover effect directly to each square
+                squareView.addEventListener('mouseover', () => {
+                    squareView.title = Format.formatSquare({row, col});
+                });
 
                 this.reloadSquare({row, col});
             }
@@ -138,18 +144,20 @@ class BoardView {
     }
 
     async tryMovePiece(fromSquare, toSquare) {
-        console.log('moving - ' + '{' +fromSquare.row + ',' +fromSquare.col + '}' + '{' +toSquare.row + ',' +toSquare.col + '}');
         let moveState = this.board.movePiece(fromSquare, toSquare);
         if(moveState.promotionSquare) {
-            console.log('promotion eligible')
             const piece = this.board.getPiece(moveState.promotionSquare);
             const promotionPiece = await this.promptUserForPromotion(piece.color);
-            this.board.promote(moveState.promotionSquare, promotionPiece);
+            moveState.isCheckMate = this.board.promote(moveState.promotionSquare, promotionPiece);
         }
         if (moveState.updatedSquares.length) {
             for (const updatedSquare of moveState.updatedSquares) {
-                console.log('updated square ', JSON.stringify(updatedSquare))
                 this.reloadSquare(updatedSquare);
+            }
+
+            if (moveState.isCheckMate) {
+                console.log('check mate - end it')
+                this.endGame()
             }
             
             if(this.humanReadable) {
@@ -249,6 +257,21 @@ class BoardView {
         document.getElementById('startButton').disabled = true;
     }
 
+    endGame() {
+        this.board.endGame();
+        this.whiteTimer.stop();
+        this.blackTimer.stop();
+
+        document.getElementById('startButton').textContent = 'Game over';
+        
+        // Show game over popup with winner
+        const gameOverPopup = document.getElementById('gameOverPopup');
+        const gameOverMessage = document.getElementById('gameOverMessage');
+        const winner = this.board.getCurrentTurn() === 'white' ? 'Black' : 'White';
+        gameOverMessage.textContent = `${winner} wins by checkmate!`;
+        gameOverPopup.style.display = 'block';
+    }
+
     resetGame() {
         this.board.reset();
         const selectedPreset = document.querySelector('input[name="timePreset"]:checked').value;
@@ -277,6 +300,15 @@ class BoardView {
         const toggle = document.getElementById('humanReadableToggle');
         toggle.addEventListener('change', (e) => {
             this.humanReadable = e.target.checked;
+        });
+    }
+
+    setupGameOverPopup() {
+        const closeButton = document.getElementById('closeGameOver');
+        const gameOverPopup = document.getElementById('gameOverPopup');
+        
+        closeButton.addEventListener('click', () => {
+            gameOverPopup.style.display = 'none';
         });
     }
 }

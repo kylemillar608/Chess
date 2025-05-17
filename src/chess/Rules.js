@@ -1,3 +1,5 @@
+import Format from '../chess/Format.js';
+
 class Rules {
     constructor() {
         this.strictMoveValidation = false;
@@ -58,7 +60,6 @@ class Rules {
         const lastMoveWasPawn = lastMove.piece.type === 'pawn';
         const lastMoveWasTwoStep = Math.abs(lastMove.toSquare.row - lastMove.fromSquare.row) === 2;
         const enPassantIsAvailable = fromSquare.row === lastMove.toSquare.row && Math.abs(lastMove.toSquare.col - fromSquare.col) === 1;
-        console.log(JSON.stringify(lastMove), lastMoveWasPawn, lastMoveWasTwoStep, enPassantIsAvailable)
         // En passant
         if (lastMoveWasPawn && 
             lastMoveWasTwoStep && // Double pawn move
@@ -198,7 +199,6 @@ class Rules {
     }
 
     queenCastleValid(board, piece, fromSquare) {
-        console.log('validate qs castle - ', JSON.stringify(board.getPiece({row: fromSquare.row, col: 0})))
         if(!board.getPiece({row: fromSquare.row, col: 0}) || board.getPiece({row: fromSquare.row, col: 0}).has_moved) {
             return false;
         }
@@ -210,7 +210,7 @@ class Rules {
         }
         // king never touches check
         for(let i = fromSquare.col; i >= fromSquare.col - 2; i--) {
-            if(this.isUnderAttack(board, piece.color, {row: fromSquare.row, col: i})) {
+            if(this.isUnderAttack(board, {row: fromSquare.row, col: i}, piece)) {
                 return false;
             }
         }
@@ -218,7 +218,6 @@ class Rules {
     }
 
     kingCastleValid(board, piece, fromSquare) {
-        console.log('validate ks castle - ', JSON.stringify(board.getPiece({row: fromSquare.row, col: 0})))
         if(!board.getPiece({row: fromSquare.row, col: 7}) || board.getPiece({row: fromSquare.row, col: 7}).has_moved) {
             return false;
         }
@@ -230,7 +229,7 @@ class Rules {
         }
         // king never touches check
         for(let i = fromSquare.col; i < 7; i++) {
-            if(this.isUnderAttack(board, piece.color, {row: fromSquare.row, col: i})) {
+            if(this.isUnderAttack(board, {row: fromSquare.row, col: i}, piece)) {
                 return false;
             }
         }
@@ -238,10 +237,8 @@ class Rules {
     }
 
     castlingMoves(board, piece, fromSquare) {
-        console.log('castle moves, piece - ', piece, ' from square - ', fromSquare)
         let validMoves = [];
         if (piece.has_moved) {
-            console.log('king has already movevd')
             return validMoves;
         }
         if (this.queenCastleValid(board, piece, fromSquare)) {
@@ -283,6 +280,23 @@ class Rules {
         return validMoves;
     }
     
+    kingSafetyFilter(board, piece, moves) {
+        const kingOg = board.getKingSquare(piece.color);
+        moves = moves.filter(move => {
+            console.log('evaluating king safety for eligible move - ', Format.formatMove(move))
+            // Create a deep copy of the board
+            const tempBoard = board.copy();
+            const tempMove = structuredClone(move)
+            
+            // Make the move on the temporary board
+            tempBoard.movePieceWithoutValidation(tempMove, true);
+
+            const kingSquare = piece.type === 'king' ? move.toSquare : kingOg;
+            console.log('current king square - ', Format.formatSquare(kingSquare))
+            return !this.isUnderAttack(tempBoard, {row: kingSquare.row, col: kingSquare.col}, piece);
+        });
+        return moves;
+    }
 
     // Returns array of valid moves for a piece at given position
     getValidMoves(board, fromSquare) {
@@ -298,6 +312,7 @@ class Rules {
         if (piece.type === 'pawn') {
             moves = this.pawnMoves(board, piece, fromSquare, board.lastMove);
         } else if (piece.type === 'rook') {
+            // not sure but maybe castling moves should also be applied here?
             moves = this.rookMoves(board, piece, fromSquare);
         } else if (piece.type === 'knight') {
             moves = this.knightMoves(board, piece, fromSquare);
@@ -309,22 +324,7 @@ class Rules {
             moves = [...this.kingMoves(board, piece, fromSquare), ...this.castlingMoves(board, piece, fromSquare)];
         }
 
-        // validate king safety
-        const kingOg = board.getKingSquare(piece.color);
-        moves = moves.filter(move => {
-            // Create a deep copy of the board
-            const tempBoard = board.copy();
-            const tempMove = structuredClone(move)
-            
-            // Make the move on the temporary board
-            tempBoard.movePieceWithoutValidation(tempMove);
-
-            // Check if the king would be in check
-            const kingCurr = piece.type === 'king' ? move.toSquare : kingOg;
-            return !this.isUnderAttack(tempBoard, piece.color, {row: kingCurr.row, col: kingCurr.col});
-        });
-
-        return moves;
+        return this.kingSafetyFilter(board, piece, moves);
     }
 
     isValidMove(board, fromSquare, toSquare) {
@@ -332,78 +332,86 @@ class Rules {
         const valid = validMoves.some(move => {
             return move.toSquare.row === toSquare.row && move.toSquare.col === toSquare.col
         });
-        console.log('is valid move - ', valid)
         return valid;
     }
 
-    isUnderAttack(board, color, square) {
+    // todo - maybe refactor. The logic is very counter intuitive.
+    // at the very least add better documentation
+    isUnderAttack(board, square, piece) {
         // First check if the position is valid
         if (square.row < 0 || square.row >= 8 || square.col < 0 || square.col >= 8) {
             return false;
         }
 
-        const direction = color === 'white' ? -1 : 1;
+        const direction = piece.color === 'white' ? -1 : 1;
 
         // Check pawn attacks with bounds checking
         if (square.row + direction >= 0 && square.row + direction < 8) {
             if (square.col > 0) {
                 let potentialPawnLeft = board.getPiece({row: square.row + direction, col: square.col - 1});
-                if (potentialPawnLeft && potentialPawnLeft.type === 'pawn' && potentialPawnLeft.color !== color) {
+                if (potentialPawnLeft && potentialPawnLeft.type === 'pawn' && potentialPawnLeft.color !== piece.color) {
                     return true;
                 }
             }
             if (square.col < 7) {
                 let potentialPawnRight = board.getPiece({row: square.row + direction, col: square.col + 1});
-                if (potentialPawnRight && potentialPawnRight.type === 'pawn' && potentialPawnRight.color !== color) {
+                if (potentialPawnRight && potentialPawnRight.type === 'pawn' && potentialPawnRight.color !== piece.color) {
                     return true;
                 }
             }
         }
 
-        // Create a dummy piece for getting moves
-        const dummyPiece = { color: color };
-        
+
+        // The way the rest of this method works is by going through each piece
+        // type and checking valid moves from the square we are currently
+        // checking is under attack. Then, using those valid moves, we check
+        // whether the toSquare currently has the piece type in question on it.
+        // Note: To get valid moves properly, we have to act as though we 
+        // are the current color.
+
         // Check knight attacks
-        const knightMoves = this.knightMoves(board, dummyPiece, square);
+        const knightMoves = this.knightMoves(board, { color: piece.color, type: 'knight' }, square);
         if (knightMoves.some(move => {
-            const piece = board.getPiece(move.toSquare);
-            return piece && piece.type === 'knight' && piece.color !== color;
+            const candidatePiece = board.getPiece(move.toSquare);
+            return candidatePiece && candidatePiece.type === 'knight' && candidatePiece.color !== piece.color;
         })) {
             return true;
         }
 
         // Check bishop attacks
-        const bishopMoves = this.bishopMoves(board, dummyPiece, square);
+        const bishopMoves = this.bishopMoves(board, { color: piece.color, type: 'bishop' }, square);
+        bishopMoves.forEach((move) => console.log(Format.formatMove(move)));
         if (bishopMoves.some(move => {
-            const piece = board.getPiece(move.toSquare);
-            return piece && piece.type === 'bishop' && piece.color !== color;
+            const candidatePiece = board.getPiece(move.toSquare);
+            console.log('candidate piece - ', candidatePiece, ' piece color - ', piece.color)
+            return candidatePiece && candidatePiece.type === 'bishop' && candidatePiece.color !== piece.color;
         })) {
             return true;
         }
 
         // Check rook attacks
-        const rookMoves = this.rookMoves(board, dummyPiece, square);
+        const rookMoves = this.rookMoves(board, { color: piece.color, type: 'rook' }, square);
         if (rookMoves.some(move => {
-            const piece = board.getPiece(move.toSquare);
-            return piece && piece.type === 'rook' && piece.color !== color;
+            const candidatePiece = board.getPiece(move.toSquare);
+            return candidatePiece && candidatePiece.type === 'rook' && candidatePiece.color !== piece.color;
         })) {
             return true;
         }
 
         // Check queen attacks
-        const queenMoves = this.queenMoves(board, dummyPiece, square);
+        const queenMoves = this.queenMoves(board, { color: piece.color, type: 'queen' }, square);
         if (queenMoves.some(move => {
-            const piece = board.getPiece(move.toSquare);
-            return piece && piece.type === 'queen' && piece.color !== color;
+            const candidatePiece = board.getPiece(move.toSquare);
+            return candidatePiece && candidatePiece.type === 'queen' && candidatePiece.color !== piece.color;
         })) {
             return true;
         }
 
         // Check king attacks
-        const kingMoves = this.kingMoves(board, dummyPiece, square);
+        const kingMoves = this.kingMoves(board, { color: piece.color, type: 'king' }, square);
         if (kingMoves.some(move => {
             const piece = board.getPiece(move.toSquare);
-            return piece && piece.type === 'king' && piece.color !== color;
+            return piece && candidatePiece.type === 'king' && candidatePiece.color !== candidatePiece.color;
         })) {
             return true;
         }
@@ -423,17 +431,6 @@ class Rules {
         const enPassantWasAvailable = move.fromSquare.row === lastMove.toSquare.row && Math.abs(lastMove.toSquare.col - move.fromSquare.col) === 1;
         const enPassantTaken = move.toSquare.col === lastMove.toSquare.col && Math.abs(lastMove.fromSquare.row - move.toSquare.row) === 1;
         
-        console.log('En Passant Check:', {
-            lastMove: JSON.stringify(lastMove),
-            currentMove: JSON.stringify(move),
-            lastMoveWasPawn,
-            lastMoveWasTwoStep,
-            thisMoveWasPawn,
-            enPassantWasAvailable,
-            enPassantTaken,
-            result: lastMoveWasPawn && lastMoveWasTwoStep && thisMoveWasPawn && enPassantWasAvailable && enPassantTaken
-        });
-        
         return lastMoveWasPawn &&
                 lastMoveWasTwoStep &&
                 thisMoveWasPawn &&
@@ -442,8 +439,33 @@ class Rules {
     }
 
     isPromotion(move) {
-        console.log('promotion move check: ', move)
         return move.piece.type === 'pawn' && ((move.piece.color === 'white' && move.toSquare.row === 0) || move.piece.color === 'black' && move.toSquare.row === 7);
+    }
+
+    isCheckMate(board, color) {
+        const kingSquare = board.getKingSquare(color);
+        const kingPiece = board.getPiece(kingSquare);
+
+        const isCurrentTurn = board.getCurrentTurn() === kingPiece.color;
+        const isUnderAttack = this.isUnderAttack(board, kingSquare, kingPiece);
+        // no need to check castling moves bc a precondition is that the king is under attack.
+        // If isUnderAttack is false, then checkmate check doesn't matter
+        // If isUnderAttack is true, then castling is impossible
+        const availableMoves = this.kingMoves(board, kingPiece, kingSquare);
+        const availableSafeMoves = this.kingSafetyFilter(board, kingPiece, availableMoves);
+        const hasNoMoves = availableSafeMoves.length === 0;
+
+        console.log('Checkmate evaluation:');
+        console.log('- Is current turn:', isCurrentTurn);
+        console.log('- Is under attack:', isUnderAttack);
+        console.log('- Available moves:');
+        availableMoves.forEach((move) => console.log(Format.formatMove(move)));
+        console.log('- Available safe moves:');
+        availableSafeMoves.forEach((move) => console.log(Format.formatMove(move)));
+        console.log('- Has no moves:', hasNoMoves);
+        console.log('- Final result:', isCurrentTurn && isUnderAttack && hasNoMoves);
+
+        return isCurrentTurn && isUnderAttack && hasNoMoves;
     }
 }
 

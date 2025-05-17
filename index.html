@@ -11,6 +11,7 @@
             border: 2px solid #333;
             display: grid;
             grid-template-columns: repeat(8, 1fr);
+            position: relative;
         }
         .square {
             display: flex;
@@ -220,11 +221,142 @@
         .promotion-piece:hover {
             background-color: #f0f0f0;
         }
+
+        .game-over-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+            text-align: center;
+            min-width: 300px;
+        }
+
+        .game-over-popup h2 {
+            margin-bottom: 20px;
+            margin-top: 0;
+            padding-right: 30px; /* Make room for the X button */
+        }
+
+        .close-popup {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #666;
+            transition: color 0.2s;
+        }
+
+        .close-popup:hover {
+            color: #333;
+        }
+
+        .close-popup::before,
+        .close-popup::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 2px;
+            background-color: currentColor;
+            transform-origin: center;
+        }
+
+        .close-popup::before {
+            transform: rotate(45deg);
+        }
+
+        .close-popup::after {
+            transform: rotate(-45deg);
+        }
+
+        .board-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding: 20px;
+        }
+
+        .row-indices {
+            display: flex;
+            width: 400px;
+            justify-content: space-between;
+            padding: 10px 0;
+            font-size: 1.2em;
+            color: #333;
+        }
+
+        .row-indices span {
+            width: 50px;  /* Match square width */
+            text-align: center;
+        }
+
+        .column-indices {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 400px;
+            padding: 0 10px;
+            font-size: 1.2em;
+            color: #333;
+            position: absolute;
+            left: -20px;  /* Move further from the board */
+            top: 50px;  /* Account for row indices and padding */
+        }
+
+        .column-indices span {
+            height: 50px;  /* Match square height */
+            display: flex;
+            align-items: center;
+            justify-content: center;  /* Center horizontally */
+            width: 30px;  /* Fixed width for consistent spacing */
+        }
+
+        .board-row {
+            display: flex;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
     <div class="game-container">
-        <div id="chessBoard" class="chess-board"></div>
+        <div class="board-container">
+            <div class="row-indices">
+                <span>a</span>
+                <span>b</span>
+                <span>c</span>
+                <span>d</span>
+                <span>e</span>
+                <span>f</span>
+                <span>g</span>
+                <span>h</span>
+            </div>
+            <div id="chessBoard" class="chess-board"></div>
+            <div class="column-indices">
+                <span>8</span>
+                <span>7</span>
+                <span>6</span>
+                <span>5</span>
+                <span>4</span>
+                <span>3</span>
+                <span>2</span>
+                <span>1</span>
+            </div>
+        </div>
         <div class="game-controls">
             <div class="timer-container">
                 <div class="player-timer" id="blackTimer">
@@ -278,6 +410,10 @@
             <div class="promotion-piece" data-piece="bishop">♝</div>
             <div class="promotion-piece" data-piece="knight">♞</div>
         </div>
+    </div>
+    <div id="gameOverPopup" class="game-over-popup">
+        <button class="close-popup" id="closeGameOver" aria-label="Close"></button>
+        <h2 id="gameOverMessage"></h2>
     </div>
     <script type="module" src="src/main.js"></script>
 </body>

@@ -6,6 +6,30 @@ class Format {
         return `${file}${rank}`;
     }
 
+    // Format a square object to algebraic notation (e.g., {row: 6, col: 4} -> "e2")
+    static formatSquare(square) {
+        const file = String.fromCharCode('a'.charCodeAt(0) + square.col);
+        const rank = 8 - square.row;
+        return `${file}${rank}`;
+    }
+
+    // Format a move object to algebraic notation with piece information
+    // e.g., {fromSquare: {row: 6, col: 4}, toSquare: {row: 4, col: 4}, piece: {type: 'pawn', color: 'white'}} -> "Pe2e4"
+    // todo: make this into standard move format
+    static formatMove(move) {
+        const pieceChar = {
+            'pawn': 'P',
+            'knight': 'N',
+            'bishop': 'B',
+            'rook': 'R',
+            'queen': 'Q',
+            'king': 'K'
+        }[move.piece.type];
+
+        const formattedPiece = move.piece.color === 'white' ? pieceChar : pieceChar.toLowerCase();
+        return `${formattedPiece}${Format.formatSquare(move.fromSquare)}${Format.formatSquare(move.toSquare)}`;
+    }
+
     // todo - move to format class
     // Convert UCI notation to board coordinates (e.g., "e2" -> [6,4])
     static UCIToCoords(uciSquare) {

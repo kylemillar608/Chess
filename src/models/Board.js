@@ -9,19 +9,19 @@ class Board {
     // Create a deep copy of the board
     copy() {
         const newBoard = new Board();
-        
+
         // Copy state using map
-        newBoard.state = this.state.map(row => 
-            row.map(piece => piece ? {...piece} : null)
+        newBoard.state = this.state.map(row =>
+            row.map(piece => piece ? { ...piece } : null)
         );
         newBoard.gameIsStarted = this.gameIsStarted;
 
         newBoard.currentTurn = this.currentTurn;
         newBoard.lastMove = this.lastMove ? structuredClone(this.lastMove) : null;
-        
+
         // Copy the rules reference
         newBoard.rules = this.rules;
-        
+
         return newBoard;
     }
 
@@ -39,10 +39,10 @@ class Board {
     // setup board
     createInitialState() {
         const board = new Array(8).fill(null).map(() => new Array(8).fill(null));
-        
+
         // Initialize back rank pieces order
         const backRankPieces = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
-        
+
         // Set up black pieces
         backRankPieces.forEach((piece, col) => {
             board[0][col] = { type: piece, color: 'black', has_moved: false };
@@ -63,7 +63,7 @@ class Board {
     }
 
     // Helper for move piece to encapsulate movement logic w/o validation. Returns all updated squares.
-    movePieceWithoutValidation(move) {
+    movePieceWithoutValidation(move, skipCheckMate) {
         const lastMove = this.lastMove;
         let updatedSquares = this.makeMove(move);
 
@@ -111,16 +111,22 @@ class Board {
         if (this.rules.isEnPassant(move, lastMove)) {
             // The captured pawn is on the same row as the moving pawn's start, and the column of the destination
             const capturedPawnSquare = { row: move.fromSquare.row, col: move.toSquare.col };
-            console.log('cap pawn - ', JSON.stringify(capturedPawnSquare))
             updatedSquares.push(this.clearSquare(capturedPawnSquare));
         }
 
-        // Switch turns
+        if (this.rules.isPromotion(move)) {
+            return {
+                updatedSquares,
+                promotionSquare: move.toSquare,
+                isCheckMate: false
+            };
+        }
+
         this.currentTurn = this.currentTurn === 'white' ? 'black' : 'white';
-        console.log('is promotion: ', this.rules.isPromotion(move))
         return {
-            updatedSquares, 
-            promotionSquare: this.rules.isPromotion(move) ? move.toSquare : undefined
+            updatedSquares,
+            promotionSquare: undefined,
+            isCheckMate: skipCheckMate ? false : this.rules.isCheckMate(this, this.currentTurn)
         };
     }
 
@@ -131,7 +137,6 @@ class Board {
         console.log('validating move..')
 
         if (!this.rules.isValidMove(this, fromSquare, toSquare)) {
-            console.log('is not valid')
             return [];
         }
 
@@ -139,17 +144,17 @@ class Board {
             fromSquare,
             toSquare,
             piece: piece,
-        });
+        }, false);
     }
 
     makeMove(move, updateLastMove = true) {
         this.state[move.toSquare.row][move.toSquare.col] = move.piece;
         this.clearSquare(move.fromSquare);
         move.piece.has_moved = true;
-        
+
         // kind of a hack to skip history for rook move during castle
         // would be better to store last moves in a more robust way
-        if(updateLastMove) {
+        if (updateLastMove) {
             this.lastMove = move;
         }
         return [move.fromSquare, move.toSquare];
@@ -157,6 +162,9 @@ class Board {
 
     promote(square, piece) {
         this.state[square.row][square.col] = piece;
+
+        this.currentTurn = this.currentTurn === 'white' ? 'black' : 'white';
+        return this.rules.isCheckMate(this, this.currentTurn);
     }
 
     clearSquare(square) {
@@ -169,9 +177,9 @@ class Board {
     }
 
     getKingSquare(color) {
-        for(let row = 0; row < 8; row++) {
-            for(let col = 0; col < 8; col++) {
-                if(this.getPiece({row, col})?.type === 'king' && this.getPiece({row, col})?.color === color) {
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                if (this.getPiece({ row, col })?.type === 'king' && this.getPiece({ row, col })?.color === color) {
                     return { row, col };
                 }
             }
@@ -180,10 +188,10 @@ class Board {
 
     getCurrentPosition() {
         let position = '';
-        for(let row = 0; row < 8; row++) {
-            for(let col = 0; col < 8; col++) {
-                const piece = this.getPiece({row, col});
-                if(piece) {
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const piece = this.getPiece({ row, col });
+                if (piece) {
                     position += Format.getPieceFENChar(piece);
                 } else {
                     position += '-';
@@ -207,6 +215,10 @@ class Board {
         this.gameIsStarted = true;
     }
 
+    endGame() {
+        this.gameIsStarted = false;
+    }
+
     isGameStarted() {
         return this.gameIsStarted;
     }
@@ -214,6 +226,10 @@ class Board {
     setStrictValidation(enabled) {
         // Use this.rules instead of this.moveValidator
         this.rules.setStrictMoveValidation(enabled);
+    }
+
+    otherColor(color) {
+        return color === 'white' ? 'black' : 'white';
     }
 }
 
